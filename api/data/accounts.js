@@ -1,7 +1,10 @@
-// Shared data store for accounts
-// ใช้ in-memory store — ข้อมูลจะรีเซ็ตเมื่อ cold start
+import { kv } from '@vercel/kv';
+import 'dotenv/config';
 
-const accounts = [
+// Shared data store for accounts
+// Now using @vercel/kv (Upstash Redis) for persistent storage
+
+const DEFAULT_ACCOUNTS = [
   {
     id: '1',
     email: 'dev.primary@company.com',
@@ -46,7 +49,19 @@ const accounts = [
   }
 ];
 
-// คำนวณ stats รวม
+async function initializeAccountsIfNeeded() {
+  try {
+    const data = await kv.get('accounts');
+    if (!data) {
+      await kv.set('accounts', DEFAULT_ACCOUNTS);
+      return DEFAULT_ACCOUNTS;
+    }
+    return data;
+  } catch (err) {
+    console.error("KV Error (fallback to default):", err);
+    return DEFAULT_ACCOUNTS;
+  }
+}// คำนวณ stats รวม
 function computeStats(accountsList) {
   const activeCount = accountsList.filter(a => a.status === 'active').length;
   const totalCount = accountsList.length;
@@ -73,35 +88,43 @@ function computeStats(accountsList) {
 }
 
 // Getter/Setter functions
-export function getAllAccounts() {
-  return [...accounts];
+export async function getAllAccounts() {
+  return await initializeAccountsIfNeeded();
 }
 
-export function getAccountById(id) {
-  return accounts.find(a => a.id === id) || null;
+export async function getAccountById(id) {
+  const accountsList = await initializeAccountsIfNeeded();
+  return accountsList.find(a => a.id === id) || null;
 }
 
-export function addAccount(account) {
-  const newId = String(Math.max(...accounts.map(a => parseInt(a.id))) + 1);
+export async function addAccount(account) {
+  const accountsList = await initializeAccountsIfNeeded();
+  const newId = String(Math.max(...accountsList.map(a => parseInt(a.id) || 0), 0) + 1);
   const newAccount = { ...account, id: newId };
-  accounts.push(newAccount);
+  accountsList.push(newAccount);
+  await kv.set('accounts', accountsList);
   return newAccount;
 }
 
-export function updateAccount(id, updates) {
-  const index = accounts.findIndex(a => a.id === id);
+export async function updateAccount(id, updates) {
+  const accountsList = await initializeAccountsIfNeeded();
+  const index = accountsList.findIndex(a => a.id === id);
   if (index === -1) return null;
-  accounts[index] = { ...accounts[index], ...updates };
-  return accounts[index];
+  accountsList[index] = { ...accountsList[index], ...updates };
+  await kv.set('accounts', accountsList);
+  return accountsList[index];
 }
 
-export function deleteAccount(id) {
-  const index = accounts.findIndex(a => a.id === id);
+export async function deleteAccount(id) {
+  const accountsList = await initializeAccountsIfNeeded();
+  const index = accountsList.findIndex(a => a.id === id);
   if (index === -1) return false;
-  accounts.splice(index, 1);
+  accountsList.splice(index, 1);
+  await kv.set('accounts', accountsList);
   return true;
 }
 
-export function getStats() {
-  return computeStats(accounts);
+export async function getStats() {
+  const accountsList = await initializeAccountsIfNeeded();
+  return computeStats(accountsList);
 }

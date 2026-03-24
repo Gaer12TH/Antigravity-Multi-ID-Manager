@@ -1,6 +1,6 @@
 import { getAllAccounts, getStats } from '../data/accounts.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -17,8 +17,8 @@ export default function handler(req, res) {
   try {
     // POST /api/accounts/refresh — จำลองการ refresh ข้อมูล quotas
     // ในอนาคตสามารถเชื่อมต่อ API จริงของแต่ละ provider ได้
-    const accounts = getAllAccounts();
-    const stats = getStats();
+    const accounts = await getAllAccounts();
+    const stats = await getStats();
 
     return res.status(200).json({
       accounts,

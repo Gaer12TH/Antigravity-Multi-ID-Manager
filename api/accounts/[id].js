@@ -1,6 +1,6 @@
 import { getAccountById, updateAccount, deleteAccount, getStats } from '../data/accounts.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS');
@@ -15,7 +15,7 @@ export default function handler(req, res) {
   try {
     if (req.method === 'GET') {
       // GET /api/accounts/:id — ดึงข้อมูล account เดียว
-      const account = getAccountById(id);
+      const account = await getAccountById(id);
       if (!account) {
         return res.status(404).json({ error: 'Account not found' });
       }
@@ -24,20 +24,22 @@ export default function handler(req, res) {
 
     if (req.method === 'PUT') {
       // PUT /api/accounts/:id — อัพเดท account
-      const updated = updateAccount(id, req.body);
+      const updated = await updateAccount(id, req.body);
       if (!updated) {
         return res.status(404).json({ error: 'Account not found' });
       }
-      return res.status(200).json({ account: updated, stats: getStats() });
+      const stats = await getStats();
+      return res.status(200).json({ account: updated, stats });
     }
 
     if (req.method === 'DELETE') {
       // DELETE /api/accounts/:id — ลบ account
-      const deleted = deleteAccount(id);
+      const deleted = await deleteAccount(id);
       if (!deleted) {
         return res.status(404).json({ error: 'Account not found' });
       }
-      return res.status(200).json({ success: true, stats: getStats() });
+      const stats = await getStats();
+      return res.status(200).json({ success: true, stats });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

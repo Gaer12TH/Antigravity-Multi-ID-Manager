@@ -1,6 +1,6 @@
 import { getAllAccounts, addAccount, getStats } from '../data/accounts.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -13,8 +13,8 @@ export default function handler(req, res) {
   try {
     if (req.method === 'GET') {
       // GET /api/accounts — ดึงข้อมูลทั้งหมด
-      const accounts = getAllAccounts();
-      const stats = getStats();
+      const accounts = await getAllAccounts();
+      const stats = await getStats();
       return res.status(200).json({ accounts, stats });
     }
 
@@ -26,7 +26,7 @@ export default function handler(req, res) {
         return res.status(400).json({ error: 'Email is required' });
       }
 
-      const newAccount = addAccount({
+      const newAccount = await addAccount({
         email: body.email,
         status: body.status || 'active',
         models: body.models || {
@@ -40,7 +40,8 @@ export default function handler(req, res) {
         },
       });
 
-      return res.status(201).json({ account: newAccount, stats: getStats() });
+      const stats = await getStats();
+      return res.status(201).json({ account: newAccount, stats });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

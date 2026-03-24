@@ -43,9 +43,10 @@ export default async function handler(req, res) {
              // Try to read real quota from local Antigravity state.vscdb if running locally!
              try {
                 const pyScript = `
-import sqlite3, json, sys
+import sqlite3, json, sys, os
 try:
-  conn = sqlite3.connect(r'C:\\Users\\Gman\\AppData\\Roaming\\Antigravity\\User\\globalStorage\\state.vscdb', uri=True)
+  db_path = r'C:\\Users\\Gman\\AppData\\Roaming\\Antigravity\\User\\globalStorage\\state.vscdb'
+  conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
   cursor = conn.cursor()
   cursor.execute("SELECT value FROM ItemTable WHERE key='n2ns.antigravity-panel'")
   row = cursor.fetchone()
@@ -93,10 +94,14 @@ except Exception as e:
                    continue; // Skip the default block
                 }
              } catch(pythonErr) {
-                console.log('Local DB sync failed, falling back to proxy tracking mock', pythonErr.message);
+                console.log('Local DB sync failed, falling back to proxy tracking mock:', pythonErr?.message);
              }
-
-             data = { stripe: { usage: { fastRequestsLimit: 1500, fastRequestsUsage: acc.credits.prompt.max - acc.credits.prompt.current, claudeOpusLimit: 500, claudeOpusUsage: 0 } } };
+             const currentPromptMax = acc.credits?.prompt?.max ?? 1500;
+             const currentPromptUsage = acc.credits?.prompt?.current !== undefined ? (currentPromptMax - acc.credits.prompt.current) : 0;
+             const currentFlowMax = acc.credits?.flow?.max ?? 500;
+             const currentFlowUsage = acc.credits?.flow?.current !== undefined ? (currentFlowMax - acc.credits.flow.current) : 0;
+             
+             data = { stripe: { usage: { fastRequestsLimit: currentPromptMax, fastRequestsUsage: currentPromptUsage, claudeOpusLimit: currentFlowMax, claudeOpusUsage: currentFlowUsage } } };
           }
 
           if (data) {
@@ -104,36 +109,38 @@ except Exception as e:
             const stripeInfo = data.stripe || {};
             const usage = stripeInfo.usage || {};
             
-            // Default mapping, Antigravity might inject usage differently.
-            // Using typical Cursor Usage fields:
             const fastLimit = usage.fastRequestsLimit ?? 1500;
             const fastUsage = usage.fastRequestsUsage ?? 0;
             const claudeLimit = usage.claudeOpusLimit ?? 500;
             const claudeUsage = usage.claudeOpusUsage ?? 0;
-            const gpt4Usage = usage.gpt4Usage ?? 0;
             
-            const fastPercent = fastLimit > 0 ? ((fastUsage / fastLimit) * 100).toFixed(1) : 'N/A';
-            const claudePercent = claudeLimit > 0 ? ((claudeUsage / claudeLimit) * 100).toFixed(1) : 'N/A';
-            // Mapping fast requests to Gemini Pro, Claude Opus to Claude
+            const fastPercentCalc = fastLimit > 0 ? ((fastUsage / fastLimit) * 100).toFixed(1) : 'N/A';
+            const claudePercentCalc = claudeLimit > 0 ? ((claudeUsage / claudeLimit) * 100).toFixed(1) : 'N/A';
+            
+            const prevGeminiTime = acc.models?.geminiPro?.time;
+            const prevClaudeTime = acc.models?.claude?.time;
+
+            const isRealGeminiData = prevGeminiTime && !prevGeminiTime.includes('Used');
+            const isRealClaudeData = prevClaudeTime && !prevClaudeTime.includes('Used');
             
             await updateAccount(acc.id, {
               status: fastUsage >= fastLimit ? 'warning' : 'active',
               models: {
                 ...acc.models,
                 geminiPro: { 
-                  percent: isNaN(fastPercent) ? 'N/A' : (100 - parseFloat(fastPercent)).toFixed(1), 
-                  time: `Used ${fastUsage}/${fastLimit}`, 
+                  percent: acc.models?.geminiPro?.percent !== 'N/A' && isRealGeminiData ? acc.models.geminiPro.percent : (isNaN(fastPercentCalc) ? 'N/A' : (100 - parseFloat(fastPercentCalc)).toFixed(1)), 
+                  time: isRealGeminiData ? prevGeminiTime : `Used ${Math.min(fastUsage, fastLimit)}/${fastLimit}`, 
                   color: 'text-emerald-400' 
                 },
                 claude: { 
-                  percent: isNaN(claudePercent) ? 'N/A' : (100 - parseFloat(claudePercent)).toFixed(1), 
-                  time: `Used ${claudeUsage}/${claudeLimit}`, 
+                  percent: acc.models?.claude?.percent !== 'N/A' && isRealClaudeData ? acc.models.claude.percent : (isNaN(claudePercentCalc) ? 'N/A' : (100 - parseFloat(claudePercentCalc)).toFixed(1)), 
+                  time: isRealClaudeData ? prevClaudeTime : `Used ${Math.min(claudeUsage, claudeLimit)}/${claudeLimit}`, 
                   color: 'text-amber-500' 
                 }
               },
               credits: {
                 prompt: { current: Math.max(0, fastLimit - fastUsage), max: fastLimit },
-                flow: { current: acc.credits.flow.current, max: acc.credits.flow.max }
+                flow: { current: Math.max(0, claudeLimit - claudeUsage), max: claudeLimit }
               }
             });
           } else {

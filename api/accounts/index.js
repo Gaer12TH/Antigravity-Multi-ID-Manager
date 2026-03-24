@@ -29,6 +29,8 @@ export default async function handler(req, res) {
       const newAccount = await addAccount({
         email: body.email,
         status: body.status || 'active',
+        provider: body.provider || 'gemini',
+        credential: body.credential || '',
         models: body.models || {
           geminiFlash: { percent: 'N/A', time: 'N/A', color: 'text-gray-500' },
           geminiPro: { percent: 'N/A', time: 'N/A', color: 'text-gray-500' },

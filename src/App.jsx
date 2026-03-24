@@ -185,6 +185,12 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Form State
+  const [formProvider, setFormProvider] = useState('gemini');
+  const [formEmail, setFormEmail] = useState('');
+  const [formCredential, setFormCredential] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const fetchAccounts = useCallback(async (showRefreshAnim = false) => {
     try {
       if (showRefreshAnim) setIsRefreshing(true);
@@ -355,10 +361,10 @@ export default function App() {
 
       {/* Add ID Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="panel w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white tracking-tight">Add New Identity</h2>
+              <h2 className="text-xl font-bold text-white tracking-tight">Connect Identity</h2>
               <button 
                 onClick={() => setIsAddModalOpen(false)} 
                 className="text-neutral-500 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-1.5 rounded-md"
@@ -369,24 +375,71 @@ export default function App() {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-[11px] font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">Email / Associated Account</label>
-                <input type="text" placeholder="e.g. system@company.com" className="w-full bg-[#111] border border-neutral-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-neutral-500 transition-colors" />
+                <label className="block text-[11px] font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">Provider</label>
+                <select 
+                  value={formProvider}
+                  onChange={(e) => setFormProvider(e.target.value)}
+                  className="w-full bg-[#111] border border-neutral-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-neutral-500 transition-colors appearance-none cursor-pointer"
+                >
+                  <option value="gemini">Google Gemini API</option>
+                  <option value="claude">Anthropic Claude API</option>
+                  <option value="ollama">Ollama (Local LLM)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">
+                  {formProvider === 'ollama' ? 'Identity Alias' : 'Email / Associated Account'}
+                </label>
+                <input 
+                  type="text" 
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
+                  placeholder={formProvider === 'ollama' ? 'e.g. Local Device 01' : 'e.g. system@company.com'} 
+                  className="w-full bg-[#111] border border-neutral-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-neutral-500 transition-colors" 
+                />
               </div>
               
               <div>
-                <label className="block text-[11px] font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">Provider API Key</label>
-                <input type="password" placeholder="••••••••••••••••" className="w-full bg-[#111] border border-neutral-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-neutral-500 transition-colors" />
+                <label className="block text-[11px] font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">
+                  {formProvider === 'ollama' ? 'Endpoint URL' : 'Provider API Key'}
+                </label>
+                <input 
+                  type={formProvider === 'ollama' ? 'url' : 'password'}
+                  value={formCredential}
+                  onChange={(e) => setFormCredential(e.target.value)}
+                  placeholder={formProvider === 'ollama' ? 'http://localhost:11434' : '••••••••••••••••'} 
+                  className="w-full bg-[#111] border border-neutral-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-neutral-500 transition-colors" 
+                />
               </div>
 
               <button 
-                onClick={() => {
-                  alert('Backend integration coming soon!');
-                  setIsAddModalOpen(false);
+                disabled={isSubmitting || !formEmail || !formCredential}
+                onClick={async () => {
+                  setIsSubmitting(true);
+                  try {
+                    const res = await fetch('/api/accounts', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email: formEmail, provider: formProvider, credential: formCredential })
+                    });
+                    if(res.ok) {
+                      await fetchAccounts(false);
+                      setIsAddModalOpen(false);
+                      setFormEmail('');
+                      setFormCredential('');
+                    } else {
+                      alert('Failed to connect identity');
+                    }
+                  } catch(e) {
+                    alert('Error connecting to Server');
+                  }
+                  setIsSubmitting(false);
                 }}
-                className="w-full mt-2 bg-white text-black hover:bg-neutral-200 font-medium py-3 rounded-lg transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
+                className="w-full mt-2 bg-white text-black disabled:bg-neutral-800 disabled:text-neutral-500 hover:bg-neutral-200 font-medium py-3 rounded-lg transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
               >
-                <CheckCircle2 size={16} />
-                Connect Identity
+                {isSubmitting ? <RefreshCw className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                Add to Dashboard
               </button>
             </div>
           </div>

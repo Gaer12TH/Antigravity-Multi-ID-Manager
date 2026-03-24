@@ -384,12 +384,13 @@ export default function App() {
                   <option value="gemini">Google Gemini API</option>
                   <option value="claude">Anthropic Claude API</option>
                   <option value="ollama">Ollama (Local LLM)</option>
+                  <option value="antigravity">Antigravity / Cursor (Token)</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-[11px] font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">
-                  {formProvider === 'ollama' ? 'Identity Alias' : 'Email / Associated Account'}
+                  {formProvider === 'ollama' ? 'Identity Alias' : (formProvider === 'antigravity' ? 'Account Name / Email' : 'Email / Associated Account')}
                 </label>
                 <input 
                   type="text" 
@@ -402,13 +403,13 @@ export default function App() {
               
               <div>
                 <label className="block text-[11px] font-medium text-neutral-400 mb-1.5 uppercase tracking-wider">
-                  {formProvider === 'ollama' ? 'Endpoint URL' : 'Provider API Key'}
+                  {formProvider === 'ollama' ? 'Endpoint URL' : (formProvider === 'antigravity' ? 'Access Token (JWT)' : 'Provider API Key')}
                 </label>
                 <input 
                   type={formProvider === 'ollama' ? 'url' : 'password'}
                   value={formCredential}
                   onChange={(e) => setFormCredential(e.target.value)}
-                  placeholder={formProvider === 'ollama' ? 'http://localhost:11434' : '••••••••••••••••'} 
+                  placeholder={formProvider === 'ollama' ? 'http://localhost:11434' : (formProvider === 'antigravity' ? 'eyJhb....' : '••••••••••••••••')} 
                   className="w-full bg-[#111] border border-neutral-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-neutral-500 transition-colors" 
                 />
               </div>

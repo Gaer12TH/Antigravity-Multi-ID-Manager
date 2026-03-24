@@ -151,17 +151,9 @@ const AccountCard = ({ account, onDelete }) => {
             </div>
           </div>
         </div>
-        <button 
-          onClick={() => {
-            if(window.confirm('Are you sure you want to remove this account?')) {
-              onDelete(account.id);
-            }
-          }}
-          className="text-neutral-500 hover:text-red-400 transition-colors pt-1"
-          title="Delete Account"
-        >
-          <Trash2 size={14} />
-        </button>
+        <div className="flex gap-2">
+          {/* Subtle Refresh / Action Icon Area if needed */}
+        </div>
       </div>
 
       {/* Gauges */}
@@ -179,6 +171,21 @@ const AccountCard = ({ account, onDelete }) => {
         </div>
         <CleanProgressBar label="Prompt" current={account.credits.prompt.current} max={account.credits.prompt.max} />
         <CleanProgressBar label="Flow" current={account.credits.flow.current} max={account.credits.flow.max} />
+      </div>
+
+      {/* Action Footer */}
+      <div className="mt-4 pt-3 flex justify-end">
+        <button 
+          onClick={() => {
+            if(window.confirm(`Are you sure you want to remove ${account.email}?`)) {
+              onDelete(account.id);
+            }
+          }}
+          className="text-[11px] font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-md text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors border border-transparent hover:border-red-500/20"
+        >
+          <Trash2 size={12} />
+          Remove Identity
+        </button>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { createClient } from '@vercel/kv';
 
 let kvClient = null;

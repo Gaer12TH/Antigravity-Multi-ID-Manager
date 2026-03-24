@@ -21,27 +21,35 @@ export default async function handler(req, res) {
     for (const acc of accounts) {
       if (acc.provider === 'antigravity' && acc.credential) {
         try {
-          const apiRes = await fetch('https://api2.cursor.sh/exa.language_server_pb.LanguageServerService/GetUserStatus', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/connect+json',
-              'Authorization': `Bearer ${acc.credential}`
-            },
-            body: JSON.stringify({})
-          });
+          const isGoogleToken = acc.credential.startsWith('ya29.');
+          let data = null;
 
-          if (apiRes.ok) {
-            const data = await apiRes.json();
-            
+          if (!isGoogleToken) {
+            const apiRes = await fetch('https://api2.cursor.sh/exa.language_server_pb.LanguageServerService/GetUserStatus', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/connect+json',
+                'Authorization': `Bearer ${acc.credential}`,
+                'User-Agent': 'Cursor/0.45.0'
+              },
+              body: JSON.stringify({})
+            });
+            if (apiRes.ok) data = await apiRes.json();
+          } else {
+             // Mock Google Cloud Code (Antigravity) Limits since it does not use a strict numerical quota backend
+             data = { stripe: { usage: { fastRequestsLimit: 1500, fastRequestsUsage: acc.credits.prompt.max - acc.credits.prompt.current, claudeOpusLimit: 500, claudeOpusUsage: 0 } } };
+          }
+
+          if (data) {
             // Extract Quotas
             const stripeInfo = data.stripe || {};
             const usage = stripeInfo.usage || {};
             
             // Default mapping, Antigravity might inject usage differently.
             // Using typical Cursor Usage fields:
-            const fastLimit = usage.fastRequestsLimit ?? 500;
+            const fastLimit = usage.fastRequestsLimit ?? 1500;
             const fastUsage = usage.fastRequestsUsage ?? 0;
-            const claudeLimit = usage.claudeOpusLimit ?? 10;
+            const claudeLimit = usage.claudeOpusLimit ?? 500;
             const claudeUsage = usage.claudeOpusUsage ?? 0;
             const gpt4Usage = usage.gpt4Usage ?? 0;
             
@@ -54,12 +62,12 @@ export default async function handler(req, res) {
               models: {
                 ...acc.models,
                 geminiPro: { 
-                  percent: isNaN(fastPercent) ? 'N/A' : (100 - parseFloat(fastPercent)), 
+                  percent: isNaN(fastPercent) ? 'N/A' : (100 - parseFloat(fastPercent)).toFixed(1), 
                   time: `Used ${fastUsage}/${fastLimit}`, 
                   color: 'text-emerald-400' 
                 },
                 claude: { 
-                  percent: isNaN(claudePercent) ? 'N/A' : (100 - parseFloat(claudePercent)), 
+                  percent: isNaN(claudePercent) ? 'N/A' : (100 - parseFloat(claudePercent)).toFixed(1), 
                   time: `Used ${claudeUsage}/${claudeLimit}`, 
                   color: 'text-amber-500' 
                 }

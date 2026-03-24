@@ -213,10 +213,6 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
-
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
@@ -227,6 +223,10 @@ export default function App() {
       setIsRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    handleRefresh();
+  }, []);
 
   return (
     <div className="min-h-screen bg-black text-neutral-200">
@@ -425,7 +425,7 @@ export default function App() {
                       body: JSON.stringify({ email: formEmail, provider: formProvider, credential: formCredential })
                     });
                     if(res.ok) {
-                      await fetchAccounts(false);
+                      await handleRefresh();
                       setIsAddModalOpen(false);
                       setFormEmail('');
                       setFormCredential('');

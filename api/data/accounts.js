@@ -1,11 +1,19 @@
 import 'dotenv/config';
 import { createClient } from '@vercel/kv';
 
-// Initialize the KV client pointing to Upstash Redis
-const kv = createClient({
-  url: process.env.KV_REST_API_URL || '',
-  token: process.env.KV_REST_API_TOKEN || '',
-});
+let kvClient = null;
+
+function getKV() {
+  if (kvClient) return kvClient;
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+    throw new Error('Missing KV_REST_API_URL or KV_REST_API_TOKEN in environment variables.');
+  }
+  kvClient = createClient({
+    url: process.env.KV_REST_API_URL,
+    token: process.env.KV_REST_API_TOKEN,
+  });
+  return kvClient;
+}
 
 // Shared data store for accounts
 // Now using @vercel/kv (Upstash Redis) for persistent storage
@@ -57,6 +65,7 @@ const DEFAULT_ACCOUNTS = [
 
 async function initializeAccountsIfNeeded() {
   try {
+    const kv = getKV();
     const data = await kv.get('accounts');
     if (!data) {
       await kv.set('accounts', DEFAULT_ACCOUNTS);
@@ -108,7 +117,12 @@ export async function addAccount(account) {
   const newId = String(Math.max(...accountsList.map(a => parseInt(a.id) || 0), 0) + 1);
   const newAccount = { ...account, id: newId };
   accountsList.push(newAccount);
-  await kv.set('accounts', accountsList);
+  
+  try {
+    const kv = getKV();
+    await kv.set('accounts', accountsList);
+  } catch(e) { /* ignore fallback */ }
+  
   return newAccount;
 }
 
@@ -117,7 +131,12 @@ export async function updateAccount(id, updates) {
   const index = accountsList.findIndex(a => a.id === id);
   if (index === -1) return null;
   accountsList[index] = { ...accountsList[index], ...updates };
-  await kv.set('accounts', accountsList);
+  
+  try {
+    const kv = getKV();
+    await kv.set('accounts', accountsList);
+  } catch(e) { /* ignore fallback */ }
+  
   return accountsList[index];
 }
 
@@ -126,7 +145,12 @@ export async function deleteAccount(id) {
   const index = accountsList.findIndex(a => a.id === id);
   if (index === -1) return false;
   accountsList.splice(index, 1);
-  await kv.set('accounts', accountsList);
+  
+  try {
+    const kv = getKV();
+    await kv.set('accounts', accountsList);
+  } catch(e) { /* ignore fallback */ }
+  
   return true;
 }
 

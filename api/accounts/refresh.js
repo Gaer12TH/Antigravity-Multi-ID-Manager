@@ -1,6 +1,9 @@
 import { getAllAccounts, updateAccount, getStats } from '../data/accounts.js';
 import { exec } from 'child_process';
 import util from 'util';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 const execPromise = util.promisify(exec);
 
 export default async function handler(req, res) {
@@ -42,10 +45,9 @@ export default async function handler(req, res) {
              // Mock Google Cloud Code (Antigravity) Limits since it does not use a strict numerical quota backend
              // Try to read real quota from local Antigravity state.vscdb if running locally!
              try {
-                const pyScript = `
-import sqlite3, json, sys, os
+                const pyScript = `import sqlite3, json, sys, os
 try:
-  db_path = r'C:\\Users\\Gman\\AppData\\Roaming\\Antigravity\\User\\globalStorage\\state.vscdb'
+  db_path = 'C:/Users/Gman/AppData/Roaming/Antigravity/User/globalStorage/state.vscdb'
   conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
   cursor = conn.cursor()
   cursor.execute("SELECT value FROM ItemTable WHERE key='n2ns.antigravity-panel'")
@@ -56,7 +58,10 @@ try:
 except Exception as e:
   sys.exit(1)
 `;
-                const { stdout } = await execPromise(`python -c "${pyScript.replace(/\n/g, ' ')}"`);
+                const tmpFile = path.join(os.tmpdir(), `ag_sync_${Date.now()}.py`);
+                fs.writeFileSync(tmpFile, pyScript);
+                const { stdout } = await execPromise(`python "${tmpFile}"`);
+                try { fs.unlinkSync(tmpFile); } catch(e){} // Cleanup
                 const snapshot = JSON.parse(stdout.trim());
                 if (snapshot && snapshot.data) {
                    const sData = snapshot.data;

@@ -1,57 +1,80 @@
-# Antigravity Multi-ID Manager
+# 🚀 Antigravity Multi-ID Quota Dashboard
 
-A comprehensive dashboard to manage multiple AI accounts (Antigravity), monitor quotas, and track credits in a centralized interface.
+**A high-performance, fully native quota tracking dashboard for Antigravity AI.**
+
+![Version](https://img.shields.io/badge/version-1.0.5-blue)
+![VS Code](https://img.shields.io/badge/VS%20Code-1.85+-green)
+![Status](https://img.shields.io/badge/status-Standalone-success)
+
+## 🌟 Overview
+
+**Antigravity Multi-ID Quota** is a fully decoupled extension designed to monitor your AI coding assistant quota usage in real-time. Moving away from third-party toolkit dependencies, this extension now implements a highly efficient native process scanner that monitors the IDE's internal state—delivering instant, accurate quota updates directly into your workflow.
 
 ## ✨ Key Features
-- **Account & Token Management**: Easily add, view, and remove accounts and their respective tokens.
-- **Quota Tracking**: Monitor remaining usage quotas and daily reset times in real time.
-- **Automated Token Extraction**: Includes a GUI application (`AntigravityTokenApp.py`) to automatically pull the active token from your VS Code Antigravity session.
-- **Hybrid Architecture**: Features an API structure that supports both a Local Development Server (Node.js) and production deployment on Vercel (Serverless Functions).
 
-## 🛠️ Tech Stack
-- **Frontend**: React 19, Vite, Tailwind CSS 4, Lucide React
-- **Backend / Database**: Vercel KV (Redis), Vercel Serverless Functions
-- **Local Dev Server**: Node.js (`server.js`)
-- **Utility Scripts**: Python scripts for automated token extraction and testing.
+### 🔌 Native Decoupled Architecture
+- **Standalone Operation:** Completely eliminates the need for the *"Toolkit for Antigravity"* extension.
+- **Process Scanning:** Dynamically detects running Antigravity Language Server instances to extract runtime ports and CSRF tokens directly from process arguments.
+- **Direct API Integration:** Communicates natively with the IDE's internal API for zero-latency quota fetching.
 
-## 🚀 Getting Started
+### 📊 Comprehensive Dashboard
+- **Real-Time Data Visualization:** Circular usage gauges and dynamic progress bars.
+- **7-Day Historical Analytics:** Track model usage over time with detailed charts.
+- **Model-Specific Breakdowns:** Detailed insights for Gemini, Claude, and other AI models.
+- **Interactive UI:** A highly polished webview with a responsive and accessible interface.
 
-### 1. Environment Variables Setup
-Create a `.env` file in the root directory to connect to Vercel KV:
-```env
-KV_REST_API_URL="your_vercel_kv_url"
-KV_REST_API_TOKEN="your_vercel_kv_token"
-```
+### 🔔 Smart Monitoring & Notifications
+- **Status Bar Integration:** Persistent, color-coded indicators (Green → Yellow → Red) detailing token counts and request limits.
+- **Customizable Alerts:** Set personal thresholds for warning (default: 70%) and critical (default: 90%) usage.
+- **Auto-Refresh Core:** Silently polling system data every 30 seconds to assure data accuracy without performance overhead.
 
-### 2. Install Dependencies
+## 🛠 Installation
+
+### Building from Source (.vsix)
 ```bash
+git clone https://github.com/ManaphatDev/Antigravity-Multi-ID-Quota.git
+cd Antigravity-Multi-ID-Quota
 npm install
+npm run compile
+npx vsce package
 ```
+Then install the generated `.vsix` file directly within your VS Code / Antigravity workspace.
 
-### 3. Running the Local Project
-Start the local API Server (simulates Vercel KV serverless functions):
+### Developer Mode
 ```bash
-npm run dev:api
+cd Antigravity-Multi-ID-Quota
+npm install
+npm run watch
+# Press F5 to trigger the Extension Development Host
 ```
 
-Start the Frontend (React/Vite):
-```bash
-npm run dev
-```
+## 💻 Commands Reference
 
-### 4. Fetching the Active Token
-This project comes with `AntigravityTokenApp.py` which opens a GUI window to automatically locate and fetch your token from the local VS Code Antigravity database (`globalStorage/state.vscdb`), allowing you to instantly copy it.
+| Command | Action |
+|---------|-------------|
+| `AGQ: Open Quota Dashboard` | Launch the interactive main dashboard panel |
+| `AGQ: Refresh Quota` | Force an immediate synchronization with internal APIs |
 
-```bash
-python AntigravityTokenApp.py
-```
-*\* You can also run the provided `GetToken.bat` shortcut to instantly launch the app.*
+## ⚙️ Configuration Settings
 
-## 📁 Project Structure & Useful Scripts
-- `src/` - React frontend source code and UI components.
-- `api/` - API Routes for adding/removing accounts and quota refreshing (integrates with Vercel Serverless).
-- `server.js` - Local dev server simulating Vercel Serverless Functions locally.
-- `AntigravityTokenApp.py` - Token copy GUI application.
-- `test-quota.py` - Script for testing quota retrieval.
-- `test_refresh.cjs` - Script for testing API calls related to data refreshing.
-- `dump_keys.py` / `print_token.py` - Additional utility scripts related to token inspection.
+Access these settings via `settings.json` under the `agq.*` namespace.
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `quotaLimit` | `1500` | Max daily request threshold |
+| `tokenLimit` | `1000000` | Max daily token allocation |
+| `refreshInterval` | `30` | Auto-refresh background polling interval (seconds) |
+| `warningThreshold` | `70` | Warning alert trigger percentage |
+| `criticalThreshold`| `90` | Critical alert trigger percentage |
+| `showTokens` | `true` | Display token accumulation in the Status Bar |
+| `statusBarPosition`| `right` | Customize where the indicator appears |
+| `enableNotifications` | `true` | Toggle all threshold push notifications |
+
+## 🧠 Architectural Insights
+
+How does it work? 
+Our refactored `QuotaManager` operates entirely independently. It invokes system-level process monitors to read the exact execution parameters of your IDE's language servers. By parsing command-line metrics, it dynamically builds authorized headers and reaches out to internal communication ports to extract quota limits without relying on explicit disk-logging. This provides an infinitely more stable, secure, and rapid ecosystem for quota tracking!
+
+## 📜 License
+
+MIT © Antigravity

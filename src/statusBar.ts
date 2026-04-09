@@ -24,24 +24,37 @@ export class StatusBarController {
         const activeAccount = data.accounts[data.activeEmail];
         let lowestPercent = 100;
 
+        let formattedTier = activeAccount.tier || 'Free';
+        if (formattedTier.startsWith('TEAMS_TIER_')) {
+            const suffix = formattedTier.replace('TEAMS_TIER_', '');
+            formattedTier = 'TEAMS_TIER_' + suffix.charAt(0).toUpperCase() + suffix.slice(1).toLowerCase();
+        } else if (formattedTier) {
+            formattedTier = formattedTier.charAt(0).toUpperCase() + formattedTier.slice(1).toLowerCase();
+        }
+
         const md = new vscode.MarkdownString();
         md.isTrusted = true;
-        md.appendMarkdown(`## Native Quota\n\n**${data.activeEmail}** (${activeAccount.tier})\n\n`);
+        md.supportThemeIcons = true;
+        
+        md.appendMarkdown(`### $(dashboard) Native Quota Monitor\n\n`);
+        md.appendMarkdown(`$(account) &nbsp;**${data.activeEmail}**&nbsp;&nbsp;|&nbsp;&nbsp;$(verified-filled) *${formattedTier}*\n\n---\n\n`);
 
         activeAccount.models.forEach(m => {
             if (m.percentage < lowestPercent) lowestPercent = m.percentage;
-            md.appendMarkdown(`**${m.name}**: ${m.percentage}% (Resets in ${m.resetIn})\n\n`);
+            let icon = m.percentage < 20 ? '$(error)' : m.percentage < 50 ? '$(warning)' : '$(pass)';
+            md.appendMarkdown(`${icon} **${m.name}**\n\n`);
+            md.appendMarkdown(`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$(pie-chart) **${m.percentage}%** remaining &nbsp;•&nbsp; $(clock) *Resets in ${m.resetIn}*\n\n`);
         });
 
         const otherEmails = Object.keys(data.accounts).filter(e => e !== data.activeEmail);
         if (otherEmails.length > 0) {
-            md.appendMarkdown('---\n\n### Offline Accounts\n\n');
+            md.appendMarkdown('---\n\n#### $(organization) Offline Accounts\n\n');
             otherEmails.forEach(e => {
-                md.appendMarkdown(`- ${e}\n`);
+                md.appendMarkdown(`$(circle-outline) ${e}\n\n`);
             });
         }
 
-        md.appendMarkdown('---\n\n*[Open Dashboard](command:agq.openDashboard)* for details.');
+        md.appendMarkdown('---\n\n[$(link-external) Open Full Dashboard](command:agq.openDashboard "Launch the interactive dashboard panel")');
 
         const alertIcon = lowestPercent < 20 ? '$(error)' : lowestPercent < 50 ? '$(warning)' : '$(check)';
         this.statusBarItem.text = `${alertIcon} AGQ: ${lowestPercent}%`;

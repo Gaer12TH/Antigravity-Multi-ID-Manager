@@ -53,6 +53,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             
             contentHtml = accounts.map(acc => {
                 const isActive = acc.email === data.activeEmail;
+                
+                let formattedTier = acc.tier || 'Free';
+                if (formattedTier.startsWith('TEAMS_TIER_')) {
+                    const suffix = formattedTier.replace('TEAMS_TIER_', '');
+                    formattedTier = 'TEAMS_TIER_' + suffix.charAt(0).toUpperCase() + suffix.slice(1).toLowerCase();
+                } else if (formattedTier) {
+                    formattedTier = formattedTier.charAt(0).toUpperCase() + formattedTier.slice(1).toLowerCase();
+                }
+
                 const modelsHtml = acc.models.map(m => `
                     <div class="model-item">
                         <div class="row">
@@ -69,10 +78,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 return `
                 <div class="account-section">
                     <div class="account-header">
-                        <span class="account-email" title="${acc.email}">${acc.email.split('@')[0]}@...</span>
+                        <span class="account-email" title="${acc.email}">${acc.email}</span>
                         ${isActive ? '<span class="badge active">ACTIVE</span>' : '<span class="badge">OFFLINE</span>'}
                     </div>
-                    <div class="account-tier">${acc.tier}</div>
+                    <div class="account-tier">${formattedTier}</div>
                     <div class="account-models">
                         ${modelsHtml}
                     </div>
@@ -92,8 +101,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     
                     .account-section { background: rgba(0,0,0,0.2); border: 1px solid var(--vscode-widget-border); border-radius: 6px; padding: 12px; margin-bottom: 20px; }
                     .account-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-                    .account-email { font-weight: bold; font-size: 13px; color: var(--vscode-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
-                    .account-tier { font-size: 10px; color: var(--vscode-textLink-foreground); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+                    .account-email { font-weight: bold; font-size: 13px; color: var(--vscode-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+                    .account-tier { display: inline-block; font-size: 10px; color: #6db1ff; background: rgba(109, 177, 255, 0.15); padding: 2px 8px; border-radius: 12px; margin-bottom: 12px; font-weight: 600; letter-spacing: 0.5px; }
                     
                     .badge { font-size: 9px; padding: 2px 6px; border-radius: 10px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-weight: bold; }
                     .badge.active { background: var(--vscode-testing-iconPassed); color: #fff; }

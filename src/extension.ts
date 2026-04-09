@@ -15,7 +15,10 @@ export function activate(context: vscode.ExtensionContext) {
     const statusBarController = new StatusBarController(context, quotaManager);
 
     // Initialize sidebar
-    const sidebarProvider = new SidebarProvider(context.extensionUri, quotaManager);
+    const sidebarProvider = new SidebarProvider(context.extensionUri, quotaManager, context);
+    sidebarProvider.onPinsChanged = (pins) => {
+        statusBarController.updatePins(pins);
+    };
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(SidebarProvider.viewType, sidebarProvider)
     );

@@ -4,14 +4,16 @@ import { QuotaManager, QuotaData } from './quotaManager';
 export class SidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'agq.sidebarView';
     private _view?: vscode.WebviewView;
+    public onPinsChanged?: (pins: string[]) => void;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
-        private readonly quotaManager: QuotaManager
+        private readonly quotaManager: QuotaManager,
+        private readonly context: vscode.ExtensionContext
     ) {
         this.quotaManager.onChange.event((data) => {
             if (this._view) {
-                this._view.webview.html = this._getHtmlForWebview(this._view.webview, data);
+                this._view.webview.html = this._getHtmlForWebview(data);
             }
         });
     }
@@ -28,7 +30,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             localResourceRoots: [this._extensionUri]
         };
 
-        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview, this.quotaManager.getData());
+        webviewView.webview.html = this._getHtmlForWebview(this.quotaManager.getData());
 
         webviewView.webview.onDidReceiveMessage(message => {
             switch (message.command) {
@@ -39,98 +41,198 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     this.quotaManager.forceScan();
                     vscode.window.showInformationMessage('Syncing quota from language server...');
                     break;
+                case 'updatePins':
+                    // Save pins to globalState so statusBar can read them
+                    this.context.globalState.update('agq.pinnedModels', message.pins);
+                    if (this.onPinsChanged) {
+                        this.onPinsChanged(message.pins);
+                    }
+                    break;
             }
         });
     }
 
-    private _getHtmlForWebview(webview: vscode.Webview, data: QuotaData) {
+    private _getInitialPins(): string[] {
+        return this.context.globalState.get<string[]>('agq.pinnedModels') || [];
+    }
+
+    private _getHtmlForWebview(data: QuotaData) {
         let contentHtml = '';
         const accounts = Object.values(data.accounts || {});
-        
+        const initialPins = this._getInitialPins();
+
         if (accounts.length > 0) {
-            // Sort to put active email first
             accounts.sort((a, b) => (a.email === data.activeEmail ? -1 : b.email === data.activeEmail ? 1 : 0));
-            
+
             contentHtml = accounts.map(acc => {
                 const isActive = acc.email === data.activeEmail;
-                
-                let formattedTier = acc.tier || 'Unknown';
+                const emailId = acc.email.replace(/[@.]/g, '_');
 
-                const modelsHtml = acc.models.map(m => `
-                    <div class="model-item">
-                        <div class="row">
-                            <span class="model-name">${m.name}</span>
-                            <span class="model-pct">${m.percentage}%</span>
+                const modelsHtml = acc.models.map((m) => {
+                    const colorClass = m.percentage < 20 ? 'danger' : m.percentage < 50 ? 'warning' : 'safe';
+                    const modelKey = `${emailId}__${m.name.replace(/\s+/g, '_')}`;
+                    const isPinned = initialPins.includes(modelKey);
+                    return `
+                    <div class="model-item" data-key="${modelKey}" id="model-${modelKey}">
+                        <div class="model-row">
+                            <div class="model-left">
+                                <button class="pin-btn ${isPinned ? 'pinned' : ''}" onclick="togglePin('${modelKey}')" title="Pin to status bar">
+                                    <span class="pin-icon">${isPinned ? '★' : '☆'}</span>
+                                </button>
+                                <span class="model-name">${m.name}</span>
+                            </div>
+                            <span class="model-pct ${colorClass}-text">${m.percentage}%</span>
                         </div>
                         <div class="progress-bar">
-                            <div class="progress-fill ${m.percentage < 20 ? 'danger' : m.percentage < 50 ? 'warning' : 'safe'}" style="width: ${m.percentage}%"></div>
+                            <div class="progress-fill ${colorClass}" style="width: ${m.percentage}%"></div>
                         </div>
-                        <div class="reset-time">Resets in ${m.resetIn}</div>
-                    </div>
-                `).join('');
+                        <div class="reset-time">⏱ Resets in ${m.resetIn}</div>
+                    </div>`;
+                }).join('');
 
                 return `
-                <div class="account-section">
+                <div class="account-section ${isActive ? 'account-active' : ''}">
                     <div class="account-header">
-                        <span class="account-email" title="${acc.email}">${acc.email}</span>
-                        ${isActive ? '<span class="badge active">ACTIVE</span>' : '<span class="badge">OFFLINE</span>'}
+                        <div class="account-left">
+                            <span class="status-dot ${isActive ? 'dot-live' : 'dot-off'}"></span>
+                            <span class="account-email" title="${acc.email}">${acc.email}</span>
+                        </div>
+                        <span class="account-tier">${acc.tier || 'Unknown'}</span>
                     </div>
-                    <div class="account-tier">${formattedTier}</div>
                     <div class="account-models">
-                        ${modelsHtml}
+                        <div class="pinned-section" id="pinned-${emailId}" style="display:none">
+                            <div class="section-label">📌 Pinned</div>
+                            <div class="pinned-list" id="pinned-list-${emailId}"></div>
+                            <div class="divider"></div>
+                        </div>
+                        <div class="all-models" id="all-${emailId}">
+                            ${modelsHtml}
+                        </div>
                     </div>
-                </div>
-                `;
+                </div>`;
             }).join('');
         } else {
-            contentHtml = '<div class="empty">Connecting to Language Server API... Please wait or open an Antigravity conversational window to wake up the server.</div>';
+            contentHtml = '<div class="empty">Connecting to Language Server...<br>Please open an Antigravity window to wake up the server.</div>';
         }
 
         return `<!DOCTYPE html>
             <html lang="en">
             <head>
                 <style>
-                    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 15px; }
-                    .header { font-size: 14px; font-weight: bold; margin-bottom: 25px; color: var(--vscode-textLink-foreground); text-align: center; }
-                    
-                    .account-section { background: rgba(0,0,0,0.2); border: 1px solid var(--vscode-widget-border); border-radius: 6px; padding: 12px; margin-bottom: 20px; }
-                    .account-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-                    .account-email { font-weight: bold; font-size: 13px; color: var(--vscode-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
-                    .account-tier { display: inline-block; font-size: 10px; color: #6db1ff; background: rgba(109, 177, 255, 0.15); padding: 2px 8px; border-radius: 12px; margin-bottom: 12px; font-weight: 600; letter-spacing: 0.5px; }
-                    
-                    .badge { font-size: 9px; padding: 2px 6px; border-radius: 10px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); font-weight: bold; }
-                    .badge.active { background: var(--vscode-testing-iconPassed); color: #fff; }
-                    
-                    .model-item { margin-bottom: 15px; }
-                    .row { display: flex; justify-content: space-between; margin-bottom: 6px; }
-                    .model-name { font-weight: 600; font-size: 12px; }
-                    .model-pct { font-size: 12px; opacity: 0.8; }
-                    .progress-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
-                    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
-                    .safe { background: var(--vscode-testing-iconPassed); }
-                    .warning { background: var(--vscode-charts-yellow); }
-                    .danger { background: var(--vscode-errorForeground); }
-                    .reset-time { font-size: 10px; opacity: 0.5; text-align: right; }
-                    
-                    .btn { display: block; width: 100%; padding: 8px; text-align: center; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; cursor: pointer; margin-top: 10px; border-radius: 4px; }
-                    .btn:hover { background: var(--vscode-button-hoverBackground); }
-                    .empty { font-size: 12px; opacity: 0.6; text-align: center; padding: 20px; line-height: 1.5; }
+                    * { box-sizing: border-box; margin: 0; padding: 0; }
+                    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 12px; font-size: 12px; }
+
+                    .header { font-size: 13px; font-weight: 700; margin-bottom: 16px; color: var(--vscode-textLink-foreground); display: flex; align-items: center; gap: 6px; }
+
+                    .account-section { border: 1px solid var(--vscode-widget-border); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; background: rgba(0,0,0,0.15); }
+                    .account-active { border-color: rgba(99,102,241,0.35); background: rgba(99,102,241,0.04); }
+
+                    .account-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+                    .account-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
+                    .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+                    .dot-live { background: #10b981; box-shadow: 0 0 5px #10b981; }
+                    .dot-off { background: #52525b; }
+                    .account-email { font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+                    .account-tier { font-size: 10px; color: #a5b4fc; background: rgba(99,102,241,0.15); padding: 2px 7px; border-radius: 10px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+
+                    .section-label { font-size: 10px; font-weight: 700; color: var(--vscode-descriptionForeground); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; opacity: 0.7; }
+                    .divider { height: 1px; background: var(--vscode-widget-border); margin: 10px 0; opacity: 0.5; }
+
+                    .model-item { margin-bottom: 12px; }
+                    .model-item:last-child { margin-bottom: 0; }
+                    .model-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+                    .model-left { display: flex; align-items: center; gap: 4px; min-width: 0; }
+                    .model-name { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                    .model-pct { font-size: 12px; font-weight: 700; flex-shrink: 0; }
+                    .safe-text { color: #10b981; }
+                    .warning-text { color: #f59e0b; }
+                    .danger-text { color: #ef4444; }
+
+                    .progress-bar { height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+                    .progress-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+                    .safe { background: #10b981; }
+                    .warning { background: #f59e0b; }
+                    .danger { background: #ef4444; }
+                    .reset-time { font-size: 10px; opacity: 0.45; text-align: right; }
+
+                    .pin-btn { background: none; border: none; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0; opacity: 0.35; transition: opacity 0.15s, transform 0.15s; }
+                    .pin-btn:hover { opacity: 1; transform: scale(1.2); }
+                    .pin-btn.pinned { opacity: 1; }
+                    .pin-icon { font-size: 12px; color: var(--vscode-foreground); }
+                    .pin-btn.pinned .pin-icon { color: #f59e0b; }
+
+                    .actions { display: flex; gap: 6px; margin-top: 14px; }
+                    .btn { flex: 1; padding: 7px; text-align: center; border: none; cursor: pointer; border-radius: 5px; font-size: 11px; font-weight: 600; font-family: inherit; transition: opacity 0.15s; }
+                    .btn:hover { opacity: 0.85; }
+                    .btn-primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+                    .btn-secondary { background: transparent; color: var(--vscode-textLink-foreground); border: 1px solid var(--vscode-widget-border); }
+                    .empty { font-size: 12px; opacity: 0.6; text-align: center; padding: 24px 12px; line-height: 1.7; }
                 </style>
             </head>
             <body>
-                <div class="header">Native Quota Monitor</div>
+                <div class="header">⚡ Native Quota Monitor</div>
                 ${contentHtml}
-                <div style="margin-top: 40px;">
-                    <button class="btn" onclick="openDashboard()">Open Full Dashboard</button>
-                    <button class="btn" style="background: transparent; color: var(--vscode-button-background); border: 1px solid var(--vscode-button-background);" onclick="forceRefresh()">Refresh Quota</button>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="openDashboard()">Full Dashboard</button>
+                    <button class="btn btn-secondary" onclick="forceRefresh()">↺ Refresh</button>
                 </div>
                 <script>
                     const vscode = acquireVsCodeApi();
+                    let pinned = ${JSON.stringify(initialPins)};
+
                     function openDashboard() { vscode.postMessage({ command: 'openDashboard' }); }
                     function forceRefresh() { vscode.postMessage({ command: 'forceRefresh' }); }
+
+                    function togglePin(key) {
+                        const idx = pinned.indexOf(key);
+                        if (idx >= 0) { pinned.splice(idx, 1); }
+                        else { pinned.push(key); }
+                        // Notify extension to save + update status bar
+                        vscode.postMessage({ command: 'updatePins', pins: [...pinned] });
+                        renderPins();
+                    }
+
+                    function renderPins() {
+                        document.querySelectorAll('.pin-btn').forEach(btn => {
+                            const key = btn.closest('.model-item').dataset.key;
+                            const isPinned = pinned.includes(key);
+                            btn.classList.toggle('pinned', isPinned);
+                            btn.querySelector('.pin-icon').textContent = isPinned ? '★' : '☆';
+                        });
+
+                        document.querySelectorAll('[id^="all-"]').forEach(allDiv => {
+                            const emailId = allDiv.id.replace('all-', '');
+                            const pinnedSection = document.getElementById('pinned-' + emailId);
+                            const pinnedList = document.getElementById('pinned-list-' + emailId);
+                            if (!pinnedSection || !pinnedList) return;
+
+                            const allItems = [...allDiv.querySelectorAll('.model-item')];
+                            const pinnedItems = allItems.filter(el => pinned.includes(el.dataset.key));
+
+                            // Hide the original item in the "All" list if it is pinned
+                            allItems.forEach(el => {
+                                el.style.display = pinned.includes(el.dataset.key) ? 'none' : 'block';
+                            });
+
+                            if (pinnedItems.length > 0) {
+                                pinnedSection.style.display = 'block';
+                                pinnedList.innerHTML = '';
+                                pinnedItems.forEach(el => {
+                                    const clone = el.cloneNode(true);
+                                    clone.style.display = 'block'; // Make clone visible
+                                    clone.querySelector('.pin-btn').onclick = () => togglePin(el.dataset.key);
+                                    pinnedList.appendChild(clone);
+                                });
+                            } else {
+                                pinnedSection.style.display = 'none';
+                                pinnedList.innerHTML = '';
+                            }
+                        });
+                    }
+
+                    renderPins();
                 </script>
             </body>
-            </html>
-        `;
+            </html>`;
     }
 }

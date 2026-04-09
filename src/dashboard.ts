@@ -46,7 +46,7 @@ export class DashboardPanel {
             return `<button class="tab ${i === 0 ? 'tab-active' : ''}" onclick="switchTab(${i})" id="tab-${i}">
                 <span class="tab-dot ${isActive ? 'dot-live' : 'dot-off'}"></span>
                 <span class="tab-email">${acc.email}</span>
-                <span class="tab-tier">${this._tierLabel(acc.tier)}</span>
+                <span class="tab-tier">${acc.tier}</span>
             </button>`;
         }).join('');
 
@@ -85,7 +85,7 @@ export class DashboardPanel {
                         <div class="panel-email">${acc.email}</div>
                         <div class="pills">
                             <span class="pill ${isActive ? 'pill-live' : 'pill-off'}">${isActive ? '● Active' : '○ Offline'}</span>
-                            <span class="pill pill-tier">${this._tierLabel(acc.tier)}</span>
+                            <span class="pill pill-tier">${acc.tier}</span>
                             <span class="pill pill-time">Updated ${updatedStr}</span>
                         </div>
                     </div>
@@ -212,14 +212,7 @@ function switchTab(idx){
         return '#10b981';
     }
 
-    private _tierLabel(tier: string): string {
-        const t = tier.toUpperCase();
-        if (t.includes('TEAM')) return 'Team Pro';
-        if (t.includes('PRO')) return 'Pro';
-        if (t.includes('FREE')) return 'Free';
-        if (t.includes('ENTERPRISE')) return 'Enterprise';
-        return tier;
-    }
+
 
     private _fmtNum(n: number): string {
         if (n >= 1000) return (n / 1000).toFixed(1) + 'K';

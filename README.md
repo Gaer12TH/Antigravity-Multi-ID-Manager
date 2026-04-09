@@ -1,80 +1,104 @@
 # 🚀 Antigravity Multi-ID Quota Dashboard
 
-**A high-performance, fully native quota tracking dashboard for Antigravity AI.**
+**Monitor your Antigravity AI quota usage in real-time — fully standalone, no dependencies required.**
 
-![Version](https://img.shields.io/badge/version-1.0.5-blue)
+![Version](https://img.shields.io/badge/version-1.0.9-blue)
 ![VS Code](https://img.shields.io/badge/VS%20Code-1.85+-green)
-![Status](https://img.shields.io/badge/status-Standalone-success)
+![License](https://img.shields.io/badge/license-MIT-success)
+![Status](https://img.shields.io/badge/status-Standalone-blueviolet)
+
+---
 
 ## 🌟 Overview
 
-**Antigravity Multi-ID Quota** is a fully decoupled extension designed to monitor your AI coding assistant quota usage in real-time. Moving away from third-party toolkit dependencies, this extension now implements a highly efficient native process scanner that monitors the IDE's internal state—delivering instant, accurate quota updates directly into your workflow.
+**Antigravity Multi-ID Quota** is a lightweight, fully self-contained VS Code extension that tracks your AI coding assistant quota in real-time.
 
-## ✨ Key Features
+It works by scanning running **Antigravity Language Server** processes, extracting their internal ports and CSRF tokens, and fetching live quota data directly from the IDE's internal API — no third-party extensions or log files needed.
 
-### 🔌 Native Decoupled Architecture
-- **Standalone Operation:** Completely eliminates the need for the *"Toolkit for Antigravity"* extension.
-- **Process Scanning:** Dynamically detects running Antigravity Language Server instances to extract runtime ports and CSRF tokens directly from process arguments.
-- **Direct API Integration:** Communicates natively with the IDE's internal API for zero-latency quota fetching.
+---
 
-### 📊 Comprehensive Dashboard
-- **Real-Time Data Visualization:** Circular usage gauges and dynamic progress bars.
-- **7-Day Historical Analytics:** Track model usage over time with detailed charts.
-- **Model-Specific Breakdowns:** Detailed insights for Gemini, Claude, and other AI models.
-- **Interactive UI:** A highly polished webview with a responsive and accessible interface.
+## ✨ Features
 
-### 🔔 Smart Monitoring & Notifications
-- **Status Bar Integration:** Persistent, color-coded indicators (Green → Yellow → Red) detailing token counts and request limits.
-- **Customizable Alerts:** Set personal thresholds for warning (default: 70%) and critical (default: 90%) usage.
-- **Auto-Refresh Core:** Silently polling system data every 30 seconds to assure data accuracy without performance overhead.
+### 🔌 Native Process Scanner
+- Detects all running Antigravity Language Server instances automatically
+- Extracts runtime port and CSRF token directly from process arguments
+- Communicates with the IDE internal API over HTTP/HTTPS
+
+### 📊 Multi-Account Dashboard
+- Supports **multiple accounts simultaneously** — each account gets its own tab
+- Displays live **quota percentage** per AI model with circular gauges
+- Shows **prompt credits** and **flow credits** usage (when available)
+- Displays raw **tier name** from API (e.g. `TEAMS_TIER_PRO`, `Google AI Pro`)
+- Shows **reset time** countdown per model
+
+### 🔔 Status Bar Integration
+- Color-coded indicator: 🟢 Green → 🟡 Yellow → 🔴 Red based on usage
+- Auto-refreshes every **15 seconds** in the background
+
+### 🗂 Sidebar Panel
+- Lightweight sidebar view for quick overview without opening the full dashboard
+
+---
 
 ## 🛠 Installation
 
-### Building from Source (.vsix)
+### From `.vsix` (Recommended)
+1. Download the latest `.vsix` from [Releases](https://github.com/ManaphatDev/Antigravity-Multi-ID-Quota/releases)
+2. In VS Code: `Extensions` → `...` → `Install from VSIX...`
+
+### Build from Source
 ```bash
 git clone https://github.com/ManaphatDev/Antigravity-Multi-ID-Quota.git
 cd Antigravity-Multi-ID-Quota
 npm install
-npm run compile
-npx vsce package
+npm run package
 ```
-Then install the generated `.vsix` file directly within your VS Code / Antigravity workspace.
+Then install the generated `.vsix` file in your VS Code / Antigravity workspace.
 
-### Developer Mode
-```bash
-cd Antigravity-Multi-ID-Quota
-npm install
-npm run watch
-# Press F5 to trigger the Extension Development Host
-```
+---
 
-## 💻 Commands Reference
+## 💻 Commands
 
-| Command | Action |
-|---------|-------------|
-| `AGQ: Open Quota Dashboard` | Launch the interactive main dashboard panel |
-| `AGQ: Refresh Quota` | Force an immediate synchronization with internal APIs |
+| Command | Description |
+|---|---|
+| `AGQ: Open Quota Dashboard` | Open the full multi-account dashboard |
+| `AGQ: Refresh Quota` | Force an immediate data refresh |
 
-## ⚙️ Configuration Settings
+---
 
-Access these settings via `settings.json` under the `agq.*` namespace.
+## ⚙️ Settings
+
+Configure via `settings.json` under the `agq.*` namespace:
 
 | Property | Default | Description |
-|----------|---------|-------------|
-| `quotaLimit` | `1500` | Max daily request threshold |
-| `tokenLimit` | `1000000` | Max daily token allocation |
-| `refreshInterval` | `30` | Auto-refresh background polling interval (seconds) |
-| `warningThreshold` | `70` | Warning alert trigger percentage |
-| `criticalThreshold`| `90` | Critical alert trigger percentage |
-| `showTokens` | `true` | Display token accumulation in the Status Bar |
-| `statusBarPosition`| `right` | Customize where the indicator appears |
-| `enableNotifications` | `true` | Toggle all threshold push notifications |
+|---|---|---|
+| `agq.refreshInterval` | `30` | Auto-refresh interval in seconds |
+| `agq.warningThreshold` | `70` | Usage % to show warning (yellow) |
+| `agq.criticalThreshold` | `90` | Usage % to show critical (red) |
+| `agq.showTokens` | `true` | Show token usage in status bar |
+| `agq.statusBarPosition` | `right` | Status bar position (`left` / `right`) |
+| `agq.enableNotifications` | `true` | Enable threshold notifications |
 
-## 🧠 Architectural Insights
+---
 
-How does it work? 
-Our refactored `QuotaManager` operates entirely independently. It invokes system-level process monitors to read the exact execution parameters of your IDE's language servers. By parsing command-line metrics, it dynamically builds authorized headers and reaches out to internal communication ports to extract quota limits without relying on explicit disk-logging. This provides an infinitely more stable, secure, and rapid ecosystem for quota tracking!
+## 🧠 How It Works
+
+1. **Process Scan** — Runs `netstat` + `wmic` to find Antigravity Language Server processes
+2. **Token Extraction** — Parses `--csrf_token` from process command-line arguments
+3. **API Fetch** — Calls `GetUserStatus` on the internal language server port
+4. **Data Parsing** — Extracts quota, model usage, credits, and tier info from the JSON response
+5. **Live Update** — Fires events to refresh the dashboard and sidebar automatically
+
+---
+
+## 📋 Requirements
+
+- VS Code `1.85+` or Antigravity IDE
+- Antigravity Language Server must be running (i.e., you are logged in and using the IDE)
+- Windows OS (uses `netstat` + `wmic` for process scanning)
+
+---
 
 ## 📜 License
 
-MIT © Antigravity
+MIT © [ManaphatDev](https://github.com/ManaphatDev)

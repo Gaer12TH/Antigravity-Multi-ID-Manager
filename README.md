@@ -45,11 +45,12 @@ Keep track of the models you care about the most:
 - Shows raw **tier name** directly from the API (e.g., `TEAMS_TIER_PRO`, `Google AI Pro`).
 - Displays **reset time** countdowns per model.
 
-### 🎨 Dashboard Themes (New!)
+### 🎨 Dashboard Themes & Animations (New!)
 Switch between three visual styles via the theme switcher in the dashboard:
 - 🌙 **Classic Dark** — Sleek purple-toned premium design
 - 🖥️ **VS Code Native** — Follows your active VS Code theme automatically
 - ✨ **Vibrant** — Bold neon blue-green tones for maximum visibility
+- 💫 **Smooth Loading Animations** — Circular gauges organically fill from 0% when opening the dashboard
 
 ### 📊 Usage Analytics & Enhanced Chart (New!)
 - **Full-size chart** (80px) with grid lines at 0%, 50%, 100% and Y-axis labels
@@ -63,8 +64,9 @@ Switch between three visual styles via the theme switcher in the dashboard:
 - Automatically shows **"Available"** when timer reaches zero
 - Persists across VS Code restarts
 
-### 🔔 Smart Notifications (New!)
+### 🔔 Smart Notifications & Suggestions (New!)
 - Automatic alerts when quota **drops below threshold** (customizable in Settings)
+- 🧠 **Context-Aware Suggestions:** Recommends alternative accounts with higher quota when your active account runs low
 - Good news notification when quota **resets back**
 - Anti-spam protection (won't re-notify until state actually changes)
 

@@ -4,6 +4,45 @@ All notable changes to **Antigravity Multi-ID Quota** will be documented in this
 
 ---
 
+## [1.1.2] — 2026-04-10
+
+### ✨ New Features
+
+#### 💫 Smooth Dashboard Animations
+- Added fluid loading animations to the dashboard circular gauges. Rings now organically fill from 0% to their target values when the dashboard opens, providing a more premium, polished experience.
+- Value counters smoothly tick upwards in sync with the gauge animation.
+
+#### 🧠 Smart Account Suggestions
+- The low quota warning notification (e.g., when dropping below 20% or hitting 0%) is now context-aware!
+- When your active account runs low, the extension automatically scans your other configured accounts. If it finds one with plenty of available quota, it adds a smart suggestion directly into the notification alert (e.g., `💡 Hint: my.second.acc@... has 95% available!`).
+
+---
+
+## [1.1.1] — 2026-04-10
+
+### ✨ New Features
+
+#### ⏱ Live Reset Countdown
+- Reset timer now counts down in **real-time every second**, even when accounts are offline
+- Stores absolute `resetTimestamp` from the API instead of pre-formatted strings
+- When timer reaches zero, displays **"Available"** automatically
+- Works across VS Code restarts — timestamp persists in `globalState`
+
+#### 📊 Enhanced Usage Chart
+- Chart height increased from 36px → **80px** for much better readability
+- Added **grid lines** at 0%, 50%, 100% with Y-axis percentage labels
+- Added **data point dots** on every recorded data point
+- Added **time labels** (start and end time) below the chart
+- Displays **data point count** in the label (e.g. `📈 6h trend · 12 data points`)
+- Glow effect on the trend line for better visibility
+- Rounded container with subtle background
+
+### 🔧 Improvements
+- Removed custom sound notification feature (unreliable cross-platform)
+- Cleaned up unused `fs` and `path` imports
+
+---
+
 ## [1.1.0] — 2026-04-09
 
 ### ✨ New Features

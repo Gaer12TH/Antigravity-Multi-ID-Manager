@@ -51,9 +51,17 @@ Switch between three visual styles via the theme switcher in the dashboard:
 - 🖥️ **VS Code Native** — Follows your active VS Code theme automatically
 - ✨ **Vibrant** — Bold neon blue-green tones for maximum visibility
 
-### 📈 Usage Analytics (New!)
-- **Sparkline graphs** show 24-hour usage trends beneath each model's gauge
+### 📊 Usage Analytics & Enhanced Chart (New!)
+- **Full-size chart** (80px) with grid lines at 0%, 50%, 100% and Y-axis labels
+- **Data point dots** and **time axis** for easy reading
+- 24-hour usage trend tracking with smart data recording
 - Auto-records data efficiently (only logs when percentage changes, or every 1 hour)
+
+### ⏱ Live Reset Countdown (New!)
+- Reset timer **counts down every second** in real-time
+- Works even when accounts are **offline** — uses absolute timestamps
+- Automatically shows **"Available"** when timer reaches zero
+- Persists across VS Code restarts
 
 ### 🔔 Smart Notifications (New!)
 - Automatic alerts when quota **drops below threshold** (customizable in Settings)
@@ -117,6 +125,13 @@ Then install the generated `.vsix` file.
 - **OS:** Windows, macOS, or Linux
 - **IDE:** VS Code `1.85+` or compatible IDE
 - **Prerequisite:** Antigravity extension installed and **logged in**
+
+---
+
+## 🐛 Feedback & Issues
+
+Found a bug or have a feature request? Please open an issue on GitHub:
+👉 **[Antigravity Multi-ID Quota Issues](https://github.com/ManaphatDev/Antigravity-Multi-ID-Quota/issues)**
 
 ---
 
